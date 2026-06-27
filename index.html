@@ -10,7 +10,7 @@
   <link href="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.css" rel="stylesheet" />
   <script src="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js"></script>
 
-  <link href="css/style.css" rel="stylesheet" />
+  <link href="css/style.css?v=3" rel="stylesheet" />
 </head>
 <body>
   <div id="map"></div>
@@ -59,9 +59,10 @@
     </div>
 
     <div class="panel__group">
-      <div class="panel__label">地名の言語</div>
-      <div class="places">
-        <button class="chip" id="lang-en">英語表記のみ</button>
+      <div class="panel__label">ラベルの言語（英語表記のみ）</div>
+      <div class="places" id="lang-switcher">
+        <button class="chip" data-lang-scope="place" id="lang-en">地名のみ</button>
+        <button class="chip" data-lang-scope="all" id="lang-en-all">すべて</button>
       </div>
     </div>
 
@@ -127,6 +128,6 @@
     <img src="assets/logo.svg" alt="simpleMap" class="logo-overlay__img" />
   </div>
 
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=3"></script>
 </body>
 </html>

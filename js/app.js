@@ -237,42 +237,67 @@ map.on('rotate', () => {
   bearingVal.textContent = `${b}°`;
 });
 
-// --- 地名の言語（既定の2行表記 ⇔ 英語のみ） ---
+// --- ラベルの言語（既定の2行表記 ⇔ 英語のみ） ---
 // 既定は「ローマ字 + 日本語」の2行。英語名(name_en)→ローマ字(name:latin)→現地名の順で英語優先に。
 const ENGLISH_TEXT_FIELD = ['coalesce', ['get', 'name_en'], ['get', 'name:latin'], ['get', 'name']];
-let placeEnglishOnly = false;
-let applyingPlaceLang = false;
+// 英語表記の対象範囲: 'none'（既定の表記）/ 'place'（地名のみ）/ 'all'（すべてのラベル）
+let englishScope = 'none';
+let applyingLang = false;
 // スタイルごとの既定の text-field を覚えておき、戻せるようにする
-const placeTextDefaults = new Map();
+const labelTextDefaults = new Map();
 
-function applyPlaceLanguage() {
-  if (applyingPlaceLang || !map.isStyleLoaded()) return;
-  applyingPlaceLang = true;
+// このラベルを英語表記にするか（スコープ別）。名前を持つラベルだけが対象。
+function wantsEnglish(layer) {
+  const category = SOURCE_LAYER_TO_CATEGORY[layer['source-layer']];
+  if (!category) return false;
+  if (englishScope === 'all') return true;
+  if (englishScope === 'place') return category === 'place';
+  return false;
+}
+
+// 高速道路などの番号シールド（ref: E1 / C2 等）は名前ではなく短縮表記なので、
+// 英語化せず元の表記のまま残す。判定は「既定の text-field が ref を参照するか」。
+function isShieldLabel(layer) {
+  return JSON.stringify(labelTextDefaults.get(layer.id) ?? null).includes('["get","ref"]');
+}
+
+function applyLabelLanguage() {
+  if (applyingLang || !map.isStyleLoaded()) return;
+  applyingLang = true;
 
   for (const layer of map.getStyle().layers || []) {
-    if (layer.type !== 'symbol' || layer['source-layer'] !== 'place') continue;
+    if (layer.type !== 'symbol') continue;
+    // 名前ラベル以外（アイコンのみ等）は触らない
+    if (!SOURCE_LAYER_TO_CATEGORY[layer['source-layer']]) continue;
 
-    if (!placeTextDefaults.has(layer.id)) {
-      placeTextDefaults.set(layer.id, map.getLayoutProperty(layer.id, 'text-field'));
+    if (!labelTextDefaults.has(layer.id)) {
+      labelTextDefaults.set(layer.id, map.getLayoutProperty(layer.id, 'text-field'));
     }
 
-    const want = placeEnglishOnly ? ENGLISH_TEXT_FIELD : placeTextDefaults.get(layer.id);
+    const toEnglish = wantsEnglish(layer) && !isShieldLabel(layer);
+    const want = toEnglish ? ENGLISH_TEXT_FIELD : labelTextDefaults.get(layer.id);
     const current = map.getLayoutProperty(layer.id, 'text-field');
     if (JSON.stringify(current) !== JSON.stringify(want)) {
       map.setLayoutProperty(layer.id, 'text-field', want);
     }
   }
 
-  applyingPlaceLang = false;
+  applyingLang = false;
 }
 
-map.on('styledata', applyPlaceLanguage);
+map.on('styledata', applyLabelLanguage);
 
-const langEnBtn = document.getElementById('lang-en');
-langEnBtn.addEventListener('click', () => {
-  placeEnglishOnly = !placeEnglishOnly;
-  langEnBtn.classList.toggle('is-active', placeEnglishOnly);
-  applyPlaceLanguage();
+// 「地名のみ」「すべて」は排他。アクティブなものを再クリックすると既定表記に戻す。
+const langSwitcher = document.getElementById('lang-switcher');
+langSwitcher.addEventListener('click', (e) => {
+  const btn = e.target.closest('.chip');
+  if (!btn) return;
+  const scope = btn.dataset.langScope;
+  englishScope = englishScope === scope ? 'none' : scope;
+  langSwitcher.querySelectorAll('.chip').forEach((b) => {
+    b.classList.toggle('is-active', b.dataset.langScope === englishScope);
+  });
+  applyLabelLanguage();
 });
 
 // --- 地名フォントの調整（斜体→Bold、少し小さく） ---
@@ -405,7 +430,7 @@ styleSwitcher.addEventListener('click', (e) => {
 
   // スタイルごとに既定値が違うので、記録をクリアして次の styledata で取り直す
   defaultBackgrounds.clear();
-  placeTextDefaults.clear();
+  labelTextDefaults.clear();
   lineJoinDefaults.clear();
   roadColorDefaults.clear();
   themeColorDefaults.clear();
