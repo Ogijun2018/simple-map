@@ -10,7 +10,7 @@
   <link href="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.css" rel="stylesheet" />
   <script src="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js"></script>
 
-  <link href="css/style.css?v=3" rel="stylesheet" />
+  <link href="css/style.css?v=6" rel="stylesheet" />
 </head>
 <body>
   <div id="map"></div>
@@ -20,14 +20,6 @@
     <div class="panel__title">simpleMap</div>
 
     <div class="panel__group">
-      <div class="panel__label">動画シーン</div>
-      <div class="places">
-        <button class="chip chip--primary" id="scene-play">▶ 再生</button>
-        <button class="chip" id="scene-reset">リセット</button>
-      </div>
-    </div>
-
-    <div class="panel__group">
       <div class="panel__label">スタイル</div>
       <div class="places" id="style-switcher">
         <button class="chip is-active" data-style="positron">Positron</button>
@@ -35,6 +27,13 @@
         <button class="chip" data-style="liberty">Liberty</button>
         <button class="chip" data-style="dark">Dark</button>
         <button class="chip" data-style="fiord">Fiord</button>
+      </div>
+    </div>
+
+    <div class="panel__group">
+      <div class="panel__label">建物（Liberty）</div>
+      <div class="places">
+        <button class="chip" id="building-3d-toggle">立体表示</button>
       </div>
     </div>
 
@@ -76,7 +75,7 @@
     <div class="panel__group">
       <div class="panel__label">道路の配色</div>
       <div class="places">
-        <button class="chip is-active" id="fancy-roads">大通り黒・細道白</button>
+        <button class="chip is-active" id="fancy-roads">細道を白に</button>
       </div>
     </div>
 
@@ -115,19 +114,8 @@
       </div>
     </div>
 
-    <div class="panel__group">
-      <div class="panel__label">ハイライト</div>
-      <div class="places">
-        <button class="chip" id="stadium-toggle">陸上競技場を光らせる</button>
-      </div>
-    </div>
   </div>
 
-  <!-- 動画シーンの最後に表示するロゴ -->
-  <div class="logo-overlay" id="logo-overlay">
-    <img src="assets/logo.svg" alt="simpleMap" class="logo-overlay__img" />
-  </div>
-
-  <script src="js/app.js?v=3"></script>
+  <script src="js/app.js?v=6"></script>
 </body>
 </html>

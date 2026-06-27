@@ -117,15 +117,13 @@ smoothBtn.addEventListener('click', () => {
   applyLineSmoothing();
 });
 
-// --- 道路の配色（大通り=黒の実線 / 細道=薄い白） ---
-// OpenMapTiles の class で判別する（全スタイル共通）。大通りは casing/inner を
-// どちらも黒にすることで太い実線に、それ以外は白で統一する。
+// --- 道路の配色（細道だけ薄い白に。大通りは元のスタイル色のまま） ---
+// OpenMapTiles の class で判別する（全スタイル共通）。大通り(MAJOR_ROAD_CLASSES)は
+// 元のスタイルの色を保ち、それ以外の細道だけ白で統一してエディトリアル風に。
 const MAJOR_ROAD_CLASSES = ['motorway', 'trunk', 'primary', 'secondary'];
-const ROAD_MAJOR_COLOR = '#4a4a4a'; // 黒すぎないダークグレー
 const ROAD_MINOR_COLOR = '#ffffff';
-const roadColorExpr = ['match', ['get', 'class'], MAJOR_ROAD_CLASSES, ROAD_MAJOR_COLOR, ROAD_MINOR_COLOR];
 
-let fancyRoads = true; // 既定でおしゃれ配色ON
+let whiteMinorRoads = true; // 既定で細道=白ON
 let applyingRoads = false;
 const roadColorDefaults = new Map();
 
@@ -141,8 +139,12 @@ function applyRoadColors() {
     if (!roadColorDefaults.has(layer.id)) {
       roadColorDefaults.set(layer.id, map.getPaintProperty(layer.id, 'line-color'));
     }
+    const def = roadColorDefaults.get(layer.id);
 
-    const want = fancyRoads ? roadColorExpr : roadColorDefaults.get(layer.id);
+    // 大通りは既定色のまま、それ以外（細道）だけ白に。
+    const want = whiteMinorRoads
+      ? ['match', ['get', 'class'], MAJOR_ROAD_CLASSES, def ?? '#000000', ROAD_MINOR_COLOR]
+      : def;
     const current = map.getPaintProperty(layer.id, 'line-color');
     if (JSON.stringify(current) !== JSON.stringify(want)) {
       map.setPaintProperty(layer.id, 'line-color', want);
@@ -156,8 +158,8 @@ map.on('styledata', applyRoadColors);
 
 const fancyRoadsBtn = document.getElementById('fancy-roads');
 fancyRoadsBtn.addEventListener('click', () => {
-  fancyRoads = !fancyRoads;
-  fancyRoadsBtn.classList.toggle('is-active', fancyRoads);
+  whiteMinorRoads = !whiteMinorRoads;
+  fancyRoadsBtn.classList.toggle('is-active', whiteMinorRoads);
   applyRoadColors();
 });
 
@@ -213,7 +215,7 @@ pitchSlider.addEventListener('input', () => {
   map.setPitch(Number(pitchSlider.value));
 });
 
-// flyTo・シーン再生・コンパス操作など、地図側で傾きが変わったら表示を同期
+// flyTo・コンパス操作など、地図側で傾きが変わったら表示を同期
 map.on('pitch', () => {
   const p = Math.round(map.getPitch());
   pitchSlider.value = p;
@@ -348,6 +350,52 @@ function applyPlaceFont() {
 
 map.on('styledata', applyPlaceFont);
 
+// --- 建物の立体表現（Liberty 向け、立体 ⇔ 平面の切り替え） ---
+// Liberty の建物は fill-extrusion（building-3d）。高さ(height)と基準(base)を 0 にすると
+// 立体（壁面と影）が消えて平面になる。3D建物を持つスタイルは Liberty だけなので、
+// 他スタイルには該当レイヤーが無く無害。
+let buildings3D = false; // 既定は平面（立体OFF）
+let applyingBuildings = false;
+// スタイルごとの既定の高さ/基準の式を覚えておき、立体に戻せるようにする
+const buildingHeightDefaults = new Map();
+
+function applyBuildingHeight() {
+  if (applyingBuildings || !map.isStyleLoaded()) return;
+  applyingBuildings = true;
+
+  for (const layer of map.getStyle().layers || []) {
+    if (layer.type !== 'fill-extrusion' || layer['source-layer'] !== 'building') continue;
+
+    if (!buildingHeightDefaults.has(layer.id)) {
+      buildingHeightDefaults.set(layer.id, {
+        height: map.getPaintProperty(layer.id, 'fill-extrusion-height'),
+        base: map.getPaintProperty(layer.id, 'fill-extrusion-base'),
+      });
+    }
+    const def = buildingHeightDefaults.get(layer.id);
+
+    const height = buildings3D ? def.height : 0;
+    const base = buildings3D ? def.base : 0;
+    if (JSON.stringify(map.getPaintProperty(layer.id, 'fill-extrusion-height')) !== JSON.stringify(height)) {
+      map.setPaintProperty(layer.id, 'fill-extrusion-height', height);
+    }
+    if (JSON.stringify(map.getPaintProperty(layer.id, 'fill-extrusion-base')) !== JSON.stringify(base)) {
+      map.setPaintProperty(layer.id, 'fill-extrusion-base', base);
+    }
+  }
+
+  applyingBuildings = false;
+}
+
+map.on('styledata', applyBuildingHeight);
+
+const building3dBtn = document.getElementById('building-3d-toggle');
+building3dBtn.addEventListener('click', () => {
+  buildings3D = !buildings3D;
+  building3dBtn.classList.toggle('is-active', buildings3D);
+  applyBuildingHeight();
+});
+
 // --- カラーテーマ（Positron をベースに配色だけ上品に上書き） ---
 const THEMES = {
   paper: { bg: '#f4f0e6', water: '#c9d6d8', green: '#dbe3cc', building: '#eae4d6' }, // 温かみのある紙
@@ -435,6 +483,7 @@ styleSwitcher.addEventListener('click', (e) => {
   roadColorDefaults.clear();
   themeColorDefaults.clear();
   placeSizeDefaults.clear();
+  buildingHeightDefaults.clear();
 
   // 視点を保ったままスタイルだけ差し替える
   map.setStyle(STYLES[styleKey]);
@@ -466,127 +515,4 @@ placeJumper.addEventListener('click', (e) => {
     ...FLY_OPTIONS,
     essential: true, // 「視差効果を減らす」設定の端末でもアニメーションする
   });
-});
-
-// --- 動画用シーン再生 ---
-// 写真をピンとして表示 → ゆっくり引いていく → 最後にロゴ、という流れ。
-// 数値や素材を書き換えれば、自分の動画に合わせて自由に調整できる。
-const SCENE = {
-  location: [139.7454, 35.6586], // 東京タワー（撮影地に合わせて変更）
-  photo: 'assets/photo.svg', // 自分の写真(jpg/png)に差し替える
-  closeZoom: 16, // 写真を出すときの寄り
-  wideZoom: 4.3, // 最後に引いたときのズーム
-  pitchStart: 55, // 寄ったときの傾き（立体感）
-  bearingStart: -20, // 寄ったときの向き
-  holdAfterPin: 1600, // 写真を見せておく時間(ms)
-  zoomOutDuration: 6500, // 引いていく時間(ms)
-  pinLeaveBefore: 1200, // 引き終わりの何ms前に写真を消し始めるか
-  logoDelay: 300, // 引き終わってからロゴを出すまで(ms)
-};
-
-const logoOverlay = document.getElementById('logo-overlay');
-let sceneMarker = null;
-let sceneTimers = [];
-
-function resetScene() {
-  sceneTimers.forEach(clearTimeout);
-  sceneTimers = [];
-  if (sceneMarker) {
-    sceneMarker.remove();
-    sceneMarker = null;
-  }
-  logoOverlay.classList.remove('is-visible');
-  document.body.classList.remove('is-playing');
-}
-
-function playScene() {
-  resetScene();
-  document.body.classList.add('is-playing'); // パネル等を隠してクリーンな画面に
-
-  const center = SCENE.location;
-
-  // 1) その場所へ寄る（傾けて立体的に）
-  map.jumpTo({
-    center,
-    zoom: SCENE.closeZoom,
-    pitch: SCENE.pitchStart,
-    bearing: SCENE.bearingStart,
-  });
-
-  // 2) 写真をピンとしてドロップ
-  const el = document.createElement('div');
-  el.className = 'photo-pin';
-  el.innerHTML = `<img src="${SCENE.photo}" alt="" />`;
-  sceneMarker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
-    .setLngLat(center)
-    .addTo(map);
-
-  // 3) 少し見せてから、ゆっくり引いていく（ズームアウト）
-  sceneTimers.push(
-    setTimeout(() => {
-      map.flyTo({
-        center,
-        zoom: SCENE.wideZoom,
-        pitch: 0,
-        bearing: 0,
-        duration: SCENE.zoomOutDuration,
-        essential: true,
-        easing: (t) => 1 - Math.pow(1 - t, 3), // easeOutCubic（最後ふわっと止まる）
-      });
-    }, SCENE.holdAfterPin)
-  );
-
-  // 4) 引き終わりの少し前に写真をフェードアウト
-  sceneTimers.push(
-    setTimeout(() => {
-      el.classList.add('is-leaving');
-    }, SCENE.holdAfterPin + SCENE.zoomOutDuration - SCENE.pinLeaveBefore)
-  );
-
-  // 5) 引き終わったらロゴを表示
-  sceneTimers.push(
-    setTimeout(() => {
-      logoOverlay.classList.add('is-visible');
-    }, SCENE.holdAfterPin + SCENE.zoomOutDuration + SCENE.logoDelay)
-  );
-}
-
-// --- 東京都内の陸上競技場を光らせる ---
-// データは OpenStreetMap（leisure=track の陸上系）を東京都の境界でクリップしたもの。
-// マーカーはスタイルを切り替えても消えないので、一度読み込めばそのまま光り続ける。
-let stadiumsLoaded = false;
-let stadiumsOn = false;
-const stadiumBtn = document.getElementById('stadium-toggle');
-
-async function loadStadiums() {
-  const res = await fetch('assets/stadiums.geojson');
-  const data = await res.json();
-  for (const f of data.features) {
-    const el = document.createElement('div');
-    el.className = 'stadium-glow';
-    el.innerHTML = '<span class="stadium-glow__ring"></span><span class="stadium-glow__dot"></span>';
-    new maplibregl.Marker({ element: el }).setLngLat(f.geometry.coordinates).addTo(map);
-  }
-}
-
-stadiumBtn.addEventListener('click', async () => {
-  if (!stadiumsLoaded) {
-    stadiumBtn.disabled = true;
-    try {
-      await loadStadiums();
-      stadiumsLoaded = true;
-    } finally {
-      stadiumBtn.disabled = false;
-    }
-  }
-  stadiumsOn = !stadiumsOn;
-  document.body.classList.toggle('stadiums-on', stadiumsOn);
-  stadiumBtn.classList.toggle('is-active', stadiumsOn);
-});
-
-document.getElementById('scene-play').addEventListener('click', playScene);
-document.getElementById('scene-reset').addEventListener('click', resetScene);
-// 再生中はパネルが隠れるので、Esc キーでいつでもリセットできる
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') resetScene();
 });
