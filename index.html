@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>simpleMap — OpenFreeMap</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="description" content="OpenFreeMap を使ったシンプルでおしゃれな地図ビューア" />
+
+  <!-- MapLibre GL JS -->
+  <link href="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js"></script>
+
+  <link href="css/style.css" rel="stylesheet" />
+</head>
+<body>
+  <div id="map"></div>
+
+  <!-- フローティングのコントロールパネル -->
+  <div class="panel">
+    <div class="panel__title">simpleMap</div>
+
+    <div class="panel__group">
+      <div class="panel__label">動画シーン</div>
+      <div class="places">
+        <button class="chip chip--primary" id="scene-play">▶ 再生</button>
+        <button class="chip" id="scene-reset">リセット</button>
+      </div>
+    </div>
+
+    <div class="panel__group">
+      <div class="panel__label">スタイル</div>
+      <div class="places" id="style-switcher">
+        <button class="chip is-active" data-style="positron">Positron</button>
+        <button class="chip" data-style="bright">Bright</button>
+        <button class="chip" data-style="liberty">Liberty</button>
+        <button class="chip" data-style="dark">Dark</button>
+        <button class="chip" data-style="fiord">Fiord</button>
+      </div>
+    </div>
+
+    <div class="panel__group">
+      <div class="panel__label">カラーテーマ</div>
+      <div class="places" id="theme-switcher">
+        <button class="chip is-active" data-theme="paper">Paper</button>
+        <button class="chip" data-theme="mono">Mono</button>
+        <button class="chip" data-theme="mint">Mint</button>
+        <button class="chip" data-theme="none">なし</button>
+      </div>
+    </div>
+
+    <div class="panel__group">
+      <div class="panel__label">ラベル表示</div>
+      <div class="places" id="label-toggler">
+        <button class="chip is-active" data-label="place">地名</button>
+        <button class="chip is-active" data-label="road">道路名</button>
+        <button class="chip is-active" data-label="water">水域名</button>
+        <button class="chip is-active" data-label="poi">施設</button>
+      </div>
+    </div>
+
+    <div class="panel__group">
+      <div class="panel__label">地名の言語</div>
+      <div class="places">
+        <button class="chip" id="lang-en">英語表記のみ</button>
+      </div>
+    </div>
+
+    <div class="panel__group">
+      <div class="panel__label">線</div>
+      <div class="places">
+        <button class="chip is-active" id="smooth-lines">なめらかに</button>
+      </div>
+    </div>
+
+    <div class="panel__group">
+      <div class="panel__label">道路の配色</div>
+      <div class="places">
+        <button class="chip is-active" id="fancy-roads">大通り黒・細道白</button>
+      </div>
+    </div>
+
+    <div class="panel__group">
+      <div class="panel__label">背景色</div>
+      <div class="bg-control">
+        <input type="color" id="bg-color" value="#f8f4f0" aria-label="背景色を選択" />
+        <button class="chip" id="bg-reset">リセット</button>
+      </div>
+    </div>
+
+    <div class="panel__group">
+      <div class="panel__label panel__label--row">
+        <span>傾き</span>
+        <span class="range__val" id="pitch-val">0°</span>
+      </div>
+      <input type="range" class="range" id="pitch-slider" min="0" max="85" step="1" value="0" aria-label="マップの傾き" />
+    </div>
+
+    <div class="panel__group">
+      <div class="panel__label panel__label--row">
+        <span>回転</span>
+        <span class="range__val" id="bearing-val">0°</span>
+      </div>
+      <input type="range" class="range" id="bearing-slider" min="-180" max="180" step="1" value="0" aria-label="マップの回転" />
+    </div>
+
+    <div class="panel__group">
+      <div class="panel__label">場所へ移動</div>
+      <div class="places" id="place-jumper">
+        <button class="chip" data-lng="139.7671" data-lat="35.6812" data-zoom="13">東京</button>
+        <button class="chip" data-lng="135.5023" data-lat="34.6937" data-zoom="13">大阪</button>
+        <button class="chip" data-lng="135.7681" data-lat="35.0116" data-zoom="13">京都</button>
+        <button class="chip" data-lng="141.3545" data-lat="43.0621" data-zoom="12">札幌</button>
+        <button class="chip" data-lng="2.3522" data-lat="48.8566" data-zoom="12">パリ</button>
+      </div>
+    </div>
+
+    <div class="panel__group">
+      <div class="panel__label">ハイライト</div>
+      <div class="places">
+        <button class="chip" id="stadium-toggle">陸上競技場を光らせる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 動画シーンの最後に表示するロゴ -->
+  <div class="logo-overlay" id="logo-overlay">
+    <img src="assets/logo.svg" alt="simpleMap" class="logo-overlay__img" />
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

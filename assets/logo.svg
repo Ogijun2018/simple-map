@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="150" viewBox="0 0 520 150" fill="none">
+  <path d="M70 18 C96 18 117 39 117 65 C117 101 70 134 70 134 C70 134 23 101 23 65 C23 39 44 18 70 18 Z" fill="#ffffff"/>
+  <circle cx="70" cy="63" r="18" fill="#2563eb"/>
+  <text x="142" y="92" font-family="-apple-system, Helvetica, Arial, sans-serif" font-size="62" font-weight="800" letter-spacing="-1" fill="#ffffff">simpleMap</text>
+</svg>
